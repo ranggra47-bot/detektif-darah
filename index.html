@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Lab STEM: Detektif Golongan Darah</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #dbe9f4; color: #333; padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .game-window { width: 100%; max-width: 500px; background: #ffffff; border-radius: 15px; overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,0.15); border: 4px solid #0056b3; display: flex; flex-direction: column; }
+        .case-nav { display: flex; background: #0056b3; padding: 5px; gap: 3px; overflow-x: auto; }
+        .case-nav button { flex: 1; min-width: 70px; padding: 8px 3px; font-size: 0.75rem; border: none; background: #004494; color: #b3d1ff; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .case-nav button.active { background: #ffffff; color: #0056b3; }
+        
+        /* SCREEN STORY DENGAN TAMPILAN KARAKTER WEBTOON */
+        .story-container { display: flex; flex-direction: column; height: 500px; background: linear-gradient(to bottom, #112233, #254466); position: relative; padding: 15px; justify-content: space-between; }
+        .character-stage { display: flex; justify-content: center; align-items: flex-end; flex-grow: 1; margin-bottom: 5px; height: 290px; overflow: hidden; }
+        
+        /* Style Gambar Karakter Agar Proporsional */
+        .character-img { height: 100%; width: auto; object-fit: contain; max-width: 100%; transition: all 0.3s ease; filter: drop-shadow(0px 5px 10px rgba(0,0,0,0.5)); }
+        
+        .dialogue-box { background: rgba(255, 255, 255, 0.95); border: 3px solid #0056b3; border-radius: 10px; padding: 12px; position: relative; z-index: 10; }
+        .speaker-name { position: absolute; top: -15px; left: 15px; background: #ffc107; color: #212529; padding: 2px 10px; font-weight: bold; font-size: 0.8rem; border-radius: 5px; border: 2px solid #0056b3; }
+        .dialogue-text { font-size: 0.88rem; line-height: 1.4; margin-top: 5px; min-height: 45px; }
+        .story-actions { margin-top: 8px; display: flex; justify-content: flex-end; }
+        .btn-story { background: #28a745; color: white; border: none; padding: 8px 15px; font-size: 0.85rem; font-weight: bold; border-radius: 5px; cursor: pointer; }
+        
+        /* LAB SCREEN & BENCH */
+        .lab-container { display: none; padding: 12px; background: #f8fafc; }
+        .lab-header-info { background: #e6f0fa; border-left: 4px solid #0056b3; padding: 8px; font-size: 0.8rem; margin-bottom: 10px; border-radius: 0 5px 5px 0; }
+        .punnett-zone { background: #fff; border: 1px dashed #b0d4f1; padding: 8px; border-radius: 5px; margin-top: 6px; }
+        .punnett-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: center; margin-top: 4px; }
+        .punnett-table th, .punnett-table td { border: 1px solid #b0d4f1; padding: 4px; }
+        .punnett-table th { background: #f0f7fd; }
+        .custom-inputs { display: none; background: #fff; padding: 8px; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 10px; }
+        .custom-inputs select { width: 100%; padding: 6px; margin-top: 3px; }
+        .subject-selector { margin-bottom: 10px; }
+        .subject-selector label { font-weight: bold; font-size: 0.8rem; color: #0056b3; display:block; margin-bottom: 3px;}
+        .subject-selector select { width: 100%; padding: 8px; border-radius: 5px; border: 2px solid #b0d4f1; font-weight: bold; }
+        .lab-bench { border: 2px dashed #b0d4f1; border-radius: 10px; padding: 10px; background: #ffffff; margin-bottom: 10px; }
+        .section-title { font-size: 0.75rem; font-weight: bold; color: #666; text-transform: uppercase; margin-bottom: 5px; text-align: center; }
+        .serums-rack { display: flex; justify-content: space-around; background: #f1f5f9; padding: 8px; border-radius: 8px; margin-bottom: 10px; }
+        .serum-bottle { width: 65px; padding: 5px; text-align: center; border-radius: 5px; cursor: pointer; border: 2px solid #cbd5e1; font-weight: bold; font-size: 0.7rem; background: white; }
+        .serum-bottle span { display: block; font-size: 1rem; }
+        #serum-a { color: #cc0000; } #serum-b { color: #006600; } #serum-d { color: #0044cc; }
+        .serum-bottle.selected { border-color: #0f172a; transform: scale(1.05); }
+        .status-box { font-size: 0.78rem; text-align: center; color: #555; margin-bottom: 10px; font-style: italic; background: #fff; padding: 5px; border-radius: 5px; min-height: 28px; }
+        .petri-plate { display: flex; justify-content: space-around; background: #f8fafc; padding: 10px 5px; border-radius: 8px; }
+        .well { text-align: center; width: 30%; }
+        .well-label { font-size: 0.7 flex; font-weight: bold; margin-bottom: 4px; color: #475569; }
+        
+        /* WARNA DARAH REALISTIS */
+        .blood-drop { width: 50px; height: 50px; background-color: #d63031; border-radius: 50%; margin: 0 auto; cursor: pointer; position: relative; box-shadow: inset -3px -3px 6px rgba(0,0,0,0.3); transition: all 0.3s ease; }
+        .blood-drop.diluted { background-color: #ff4757; background-image: radial-gradient(circle at 35% 35%, #ff7675 10%, transparent 60%); }
+        .blood-drop.clotted { background-color: #630202; background-image: radial-gradient(circle at 30% 30%, #3a0000 20%, transparent 25%), radial-gradient(circle at 70% 40%, #3a0000 15%, transparent 25%), radial-gradient(circle at 45% 75%, #210000 18%, transparent 22%); border: 1px dashed #c0392b; }
+        
+        .verify-zone { margin-top: 10px; background: #fff3cd; padding: 10px; border-radius: 5px; border: 1px solid #ffeeba; }
+        .verify-zone h4 { font-size: 0.8rem; color: #856404; margin-bottom: 5px; }
+        .verify-zone select { width: 100%; padding: 6px; margin-bottom: 5px; font-size: 0.8rem; font-weight: bold;}
+        .verify-zone label { display: block; font-size: 0.75rem; font-weight: bold; margin-top: 3px;}
+        .btn-action { width: 100%; padding: 10px; font-size: 0.88rem; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; margin-top: 5px; }
+        #btn-check { background: #28a745; color: white; }
+        #btn-reset { background: #6c757d; color: white; }
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 15px; z-index: 100; display: none; }
+        .modal-content { background: white; padding: 15px; border-radius: 10px; text-align: center; max-width: 400px; width: 100%; }
+        .modal-content h3 { color: #28a745; margin-bottom: 5px; font-size: 1.1rem; }
+        .modal-content p { font-size: 0.8rem; line-height: 1.4; margin-bottom: 12px; text-align: left; background: #f8fafc; padding: 8px; border-radius: 5px; }
+        .modal-content button { background: #0056b3; color: white; border: none; padding: 8px 20px; border-radius: 5px; font-weight: bold; }
+        .guide-sheet { width: 100%; max-width: 500px; background: white; border-radius: 10px; padding: 10px; margin-top: 10px; font-size: 0.75rem; line-height: 1.4; }
+        .guide-sheet h4 { color: #0056b3; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="game-window">
+        <!-- Navigasi Kasus -->
+        <div class="case-nav">
+            <button id="nav-1" class="active" onclick="switchCase(1)">Kasus 1</button>
+            <button id="nav-2" onclick="switchCase(2)">Kasus 2</button>
+            <button id="nav-3" onclick="switchCase(3)">Kasus 3</button>
+            <button id="nav-4" onclick="switchCase(4)">Kasus 4</button>
+            <button id="nav-5" onclick="switchCase(5)">Kasus 5</button>
+            <button id="nav-custom" onclick="switchCase('custom')">Custom</button>
+        </div>
+
+        <!-- SCREEN STORY -->
+        <div id="screen-story" class="story-container">
+            <div class="character-stage">
+                <img id="char-img-element" class="character-img" src="" alt="Karakter">
+            </div>
+            <div class="dialogue-box">
+                <div class="speaker-name" id="speaker-lbl">Nama Tokoh</div>
+                <div class="dialogue-text" id="dialogue-txt">Memuat cerita...</div>
+                <div class="story-actions">
+                    <button class="btn-story" id="story-next-btn" onclick="advanceStory()">Lanjut ▶</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN LAB -->
+        <div id="screen-lab" class="lab-container">
+            <div id="lab-scenario-text" class="lab-header-info">Loading data...</div>
+            <div id="custom-controls" class="custom-inputs">
+                <label style="font-size:0.75rem; font-weight:bold;">Set Darah Kustom Uji:</label>
+                <select id="custom-blood-type" onchange="setupCustomCase()">
+                    <option value="A+">A+</option><option value="A-">A-</option>
+                    <option value="B+">B+</option><option value="B-">B-</option>
+                    <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                    <option value="O+">O+</option><option value="O-">O-</option>
+                </select>
+            </div>
+            <div class="subject-selector">
+                <label id="selector-title" for="select-subject">Tahap Uji Laboratorium:</label>
+                <select id="select-subject" onchange="loadSubjectBlood()"></select>
+            </div>
+            <div class="lab-bench">
+                <div class="section-title">1. Rak Pipet Serum Antibodi</div>
+                <div class="serums-rack">
+                    <div class="serum-bottle" id="serum-a" onclick="selectSerum('A')">Anti-A<span>🧪</span></div>
+                    <div class="serum-bottle" id="serum-b" onclick="selectSerum('B')">Anti-B<span>🧪</span></div>
+                    <div class="serum-bottle" id="serum-d" onclick="selectSerum('D')">Anti-D<span>🧪</span></div>
+                </div>
+                <div id="status-text" class="status-box">Pilih botol serum di atas rak.</div>
+                <div class="section-title">2. Cawan Uji Aglutinasi</div>
+                <div class="petri-plate">
+                    <div class="well">
+                        <div class="well-label">Wadah A</div>
+                        <div class="blood-drop" id="drop-A" onclick="dropSerum('A')"></div>
+                    </div>
+                    <div class="well">
+                        <div class="well-label">Wadah B</div>
+                        <div class="blood-drop" id="drop-B" onclick="dropSerum('B')"></div>
+                    </div>
+                    <div class="well">
+                        <div class="well-label">Wadah Rh</div>
+                        <div class="blood-drop" id="drop-D" onclick="dropSerum('D')"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="verify-zone" id="guess-container"></div>
+            <button id="btn-check" class="btn-action" onclick="checkAnswer()">🔍 Verifikasi Jawaban Detektif</button>
+            <button id="btn-reset" class="btn-action" onclick="resetPlate()">🔄 Bersihkan Meja Uji</button>
+        </div>
+    </div>
+
+    <div class="guide-sheet">
+        <h4>🔬 Lembar Acuan Reaksi Lab</h4>
+        <p>• <b>Gumpal (Merah Tua):</b> Sel memiliki Antigen tersebut (Positif).</p>
+        <p>• <b>Encer (Merah Terang):</b> Sel TIDAK memiliki Antigen tersebut (Negatif).</p>
+    </div>
+
+    <div class="modal" id="success-modal">
+        <div class="modal-content">
+            <h3>🎉 Analisis Valid & Akurat!</h3>
+            <p id="modal-message">Hasil uji lab kamu sukses terverifikasi benar.</p>
+            <button onclick="closeModal()">Lanjutkan Ke Kasus Lain</button>
+        </div>
+    </div>
+
+    <script>
+        // JALUR SUDAH DIPERBAIKI KE FOLDER 'img/'
+        const imageAssets = {
+            doctor: "img/dokter.png",
+            nurse: "img/suster.png",
+            police: "img/polisi.png",
+            detective: "img/detektif.png",
+            civilian: "img/warga.png"
+        };
+
+        const bloodPool = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+        let cases = {};
+        let currentCaseId = 1;
+        let selectedSerum = null;
+        let stateData = {};
+        let storyIndex = 0;
+        let currentStoryLines = [];
+
+        function shuffleArray(array) {
+            let arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function buildPunnettHTML(mother, father) {
+            const getAlels = (type) => {
+                if(type.startsWith('A')) return ['Iᴬ', 'Iᴼ'];
+                if(type.startsWith('B')) return ['Iᴮ', 'Iᴼ'];
+                if(type.startsWith('AB')) return ['Iᴬ', 'Iᴮ'];
+                return ['Iᴼ', 'Iᴼ'];
+            };
+            let mAlels = getAlels(mother);
+            let fAlels = getAlels(father);
+            return `
+                <div class="punnett-zone">
+                    <span style="font-size:0.7rem; font-weight:bold; color:#0056b3;">📊 STEM Math: Hukum Peluang Genotipe (Punnett)</span>
+                    <table class="punnett-table">
+                        <tr><th>Ibu \\ Ayah</th><th>${fAlels[0]}</th><th>${fAlels[1]}</th></tr>
+                        <tr><td style="background:#f1f5f9; font-weight:bold;">${mAlels[0]}</td><td>${mAlels[0]}${fAlels[0]}</td><td>${mAlels[0]}${fAlels[1]}</td></tr>
+                        <tr><td style="background:#f1f5f9; font-weight:bold;">${mAlels[1]}</td><td>${mAlels[1]}${fAlels[0]}</td><td>${mAlels[1]}${fAlels[1]}</td></tr>
+                    </table>
+                </div>
+            `;
+        }
+
+        function checkParentage(mother, father, child) {
+            const getAlels = (type) => {
+                if(type.startsWith('A')) return ['A', 'O'];
+                if(type.startsWith('B')) return ['B', 'O'];
+                if(type.startsWith('AB')) return ['A', 'B'];
+                return ['O', 'O'];
+            };
+            let mAlels = getAlels(mother);
+            let fAlels = getAlels(father);
+            let childMain = child.replace(/[+-]/g, '');
+            let possibleABO = false;
+            for(let m of mAlels) {
+                for(let f of fAlels) {
+                    let comb = [m, f];
+                    if(childMain === 'A' && ((comb.includes('A') && comb.includes('O')) || (m==='A' && f==='A'))) possibleABO = true;
+                    if(childMain === 'B' && ((comb.includes('B') && comb.includes('O')) || (m==='B' && f==='B'))) possibleABO = true;
+                    if(childMain === 'AB' && (comb.includes('A') && comb.includes('B'))) possibleABO = true;
+                    if(childMain === 'O' && (m==='O' && f==='O')) possibleABO = true;
+                }
+            }
+            let mRh = mother.includes('+');
+            let fRh = father.includes('+');
+            let cRh = child.includes('+');
+            return possibleABO && !(!mRh && !fRh && cRh);
+        }
+
+        function isTransfusionSafe(donor, recipient) {
+            if(donor.includes('A') && !recipient.includes('A')) return false;
+            if(donor.includes('B') && !recipient.includes('B')) return false;
+            if(donor.includes('+') && !recipient.includes('+')) return false;
+            return true;
+        }
+
+        function generateRandomCase1() {
+            let motherType = bloodPool[Math.floor(Math.random() * bloodPool.length)];
+            let fatherType = bloodPool[Math.floor(Math.random() * bloodPool.length)];
+            let isSwapped = Math.random() < 0.5;
+            let babyAType = "", babyBType = "";
+            let shuffledPool = shuffleArray(bloodPool);
+            
+            let validChildType = "O-"; 
+            for(let b of shuffledPool) { if(checkParentage(motherType, fatherType, b)) { validChildType = b; break; } }
+            let invalidChildType = "AB+";
+            for(let b of shuffledPool) { if(!checkParentage(motherType, fatherType, b)) { invalidChildType = b; break; } }
+
+            if(!isSwapped) { babyAType = validChildType; babyBType = invalidChildType; } 
+            else { babyAType = invalidChildType; babyBType = validChildType; }
+
+            cases[1] = {
+                title: "Kasus 1: Misteri Tertukarnya Bayi RS",
+                story: [
+                    { speaker: "Suster Shinta", avatar: "nurse", text: "Dokter Andi! Gawat, gelang identitas dua bayi di ruang bersalin lepas setelah dimandikan! Kedua pasang orang tua panik luar biasa." },
+                    { speaker: "Dr. Andi", avatar: "doctor", text: "Tenang, Suster. Sains punya solusinya. Mari ambil sampel darah dari pasang orang tua ruangan A serta sampel dari kedua bayi tersebut!" },
+                    { speaker: "Suster Shinta", avatar: "nurse", text: "Baik dok, sampel sudah diletakkan di meja laboratorium virtual. Silakan lakukan pengujian serum aglutinasi sekarang." }
+                ],
+                desc: `<b>Skenario Acak:</b> Ujilah sampel darah Orang Tua (Ibu & Ayah) serta Bayi A & Bayi B. Temukan kecocokan pewarisan sifat berdasarkan hukum mendel.<br>${buildPunnettHTML(motherType, fatherType)}`,
+                motherReal: motherType, fatherReal: fatherType, isSwappedScenario: isSwapped,
+                subjects: [
+                    { id: "ibu", name: "1. Sampel Darah Ibu", type: motherType },
+                    { id: "ayah", name: "2. Sampel Darah Ayah", type: fatherType },
+                    { id: "bayi_a", name: "3. Sampel Darah Bayi A", type: babyAType },
+                    { id: "bayi_b", name: "4. Sampel Darah Bayi B", type: babyBType }
+                ],
+                setupInterface: function() {
+                    let html = `
+                        <h4>Identifikasi Golongan Darah Hasil Lab:</h4>
+                        <label>Ibu:</label><select id="guess-ibu">${getBloodOptions()}</select>
+                        <label>Ayah:</label><select id="guess-ayah">${getBloodOptions()}</select>
+                        <label>Bayi A:</label><select id="guess-bayia">${getBloodOptions()}</select>
+                        <label>Bayi B:</label><select id="guess-bayib">${getBloodOptions()}</select>
+                        <label>Kesimpulan Hubungan Anak Kandung:</label>
+                        <select id="guess-conclusion">
+                            <option value="">-- Pilih Hasil Analisis --</option>
+                            <option value="safe">Bayi A adalah Anak Kandung (Bayi B Tertukar)</option>
+                            <option value="swapped">Bayi B adalah Anak Kandung (Bayi A Tertukar)</option>
+                        </select>
+                    `;
+                    document.getElementById('guess-container').innerHTML = html;
+                },
+                validate: function() {
+                    let gIbu = document.getElementById('guess-ibu').value;
+                    let gAyah = document.getElementById('guess-ayah').value;
+                    let gBayiA = document.getElementById('guess-bayia').value;
+                    let gBayiB = document.getElementById('guess-bayib').value;
+                    let gConc = document.getElementById('guess-conclusion').value;
+
+                    if(!gIbu || !gAyah || !gBayiA || !gBayiB || !gConc) return { success: false, msg: "Lengkapi semua isian jawaban terlebih dahulu!" };
+                    if(gIbu !== this.motherReal || gAyah !== this.fatherReal || gBayiA !== this.subjects[2].type || gBayiB !== this.subjects[3].type) {
+                        return { success: false, msg: "Identifikasi golongan darah tidak tepat! Amati penggumpalan cawan lab kembali." };
+                    }
+                    let expectedConc = this.isSwappedScenario ? "swapped" : "safe";
+                    if(gConc === expectedConc) {
+                        return { success: true, msg: `Analisis Sempurna!<br>Ibu (<b>${this.motherReal}</b>) & Ayah (<b>${this.fatherReal}</b>) secara kombinasi alel biologi terbukti hanya valid melahirkan anak kandung bergolongan darah <b>${this.isSwappedScenario ? this.subjects[3].type : this.subjects[2].type}</b>.` };
+                    }
+                    return { success: false, msg: "Kesimpulan salah! Hitung kembali persilangan hukum mendel golongan darah." };
+                }
+            };
+        }
+
+        function generateRandomCase2() {
+            let challengingPatients = ["A-", "B-", "O-", "AB-", "O+", "A+"];
+            let patientType = challengingPatients[Math.floor(Math.random() * challengingPatients.length)];
+            let safeDonorType = ""; let unsafeDonorType = "";
+            let shuffledPool = shuffleArray(bloodPool);
+            for(let b of shuffledPool) { if(isTransfusionSafe(b, patientType) && b !== patientType) { safeDonorType = b; break; } }
+            if(!safeDonorType) safeDonorType = patientType;
+            for(let b of shuffledPool) { if(!isTransfusionSafe(b, patientType)) { unsafeDonorType = b; break; } }
+            let isDonor1Safe = Math.random() < 0.5;
+            let d1Type = isDonor1Safe ? safeDonorType : unsafeDonorType;
+            let d2Type = isDonor1Safe ? unsafeDonorType : safeDonorType;
+
+            cases[2] = {
+                title: "Kasus 2: Transfusi Darah Darurat",
+                story: [
+                    { speaker: "Perawat Rina", avatar: "nurse", text: "Dokter Andi! Ada pasien kecelakaan darurat bernama Rian. Dia kehilangan banyak darah dan kondisinya kritis!" },
+                    { speaker: "Dr. Andi", avatar: "doctor", text: "Segera lakukan cek cepat! Golongan darah pasien adalah " + patientType + ". Kita harus memeriksa dua kantong darah donor yang tersisa di lemari pendingin." },
+                    { speaker: "Perawat Rina", avatar: "nurse", text: "Baik dok. Tolong uji sampel kedua kantong donor itu, jangan sampai salah memasukkan donor darah yang memicu koagulasi fatal!" }
+                ],
+                desc: `<b>Skenario Acak:</b> Pasien (Rian) membutuhkan darah <b>${patientType}</b>. Tentukan golongan darah Kantong Donor 1 dan Kantong Donor 2, lalu pilih kantong yang aman!`,
+                patientReal: patientType, d1Real: d1Type, d2Real: d2Type, d1SafeFlag: isDonor1Safe,
+                subjects: [ { id: "donor1", name: "1. Sampel Kantong Donor 1", type: d1Type }, { id: "donor2", name: "2. Sampel Kantong Donor 2", type: d2Type } ],
+                setupInterface: function() {
+                    let html = `
+                        <h4>Identifikasi Golongan Darah Donor:</h4>
+                        <label>Kantong Donor 1:</label><select id="guess-d1">${getBloodOptions()}</select>
+                        <label>Kantong Donor 2:</label><select id="guess-d2">${getBloodOptions()}</select>
+                        <label>Kantong Aman Ditransfusikan:</label>
+                        <select id="guess-safe-donor"><option value="">-- Pilih Kantong --</option><option value="d1">Kantong Donor 1 Aman</option><option value="d2">Kantong Donor 2 Aman</option></select>
+                    `;
+                    document.getElementById('guess-container').innerHTML = html;
+                },
+                validate: function() {
+                    let gd1 = document.getElementById('guess-d1').value; let gd2 = document.getElementById('guess-d2').value; let gSafe = document.getElementById('guess-safe-donor').value;
+                    if(!gd1 || !gd2 || !gSafe) return { success: false, msg: "Lengkapi identifikasi dan pilihan kantong transfusi!" };
+                    if(gd1 !== this.d1Real || gd2 !== this.d2Real) return { success: false, msg: "Pembacaan golongan darah kantong donor masih salah!" };
+                    let expectedAnswer = this.d1SafeFlag ? "d1" : "d2";
+                    if(gSafe === expectedAnswer) return { success: true, msg: `Transfusi Berhasil!<br>Pasien <b>${this.patientReal}</b> selamat menerima donor sel darah merah tanpa memicu aglutinasi.` };
+                    return { success: false, msg: "Fatal! Kantong yang kamu pilih tidak kompatibel!" };
+                }
+            };
+        }
+
+        function generateRandomCase3() {
+            let motherType = bloodPool[Math.floor(Math.random() * bloodPool.length)];
+            let fatherType = bloodPool[Math.floor(Math.random() * bloodPool.length)];
+            let isLegitimate = Math.random() < 0.5; let childType = ""; let shuffledPool = shuffleArray(bloodPool);
+            if(isLegitimate) { for(let b of shuffledPool) { if(checkParentage(motherType, fatherType, b)) { childType = b; break; } } } 
+            else { for(let b of shuffledPool) { if(!checkParentage(motherType, fatherType, b)) { childType = b; break; } } }
+            if(!childType) childType = "O-";
+
+            cases[3] = {
+                title: "Kasus 3: Sengketa Hak Asuh Anak",
+                story: [
+                    { speaker: "Pengacara Budi", avatar: "civilian", text: "Selamat pagi Dokter Andi. Saya membawa berkas sengketa hukum keluarga. Ibu Sinta mengklaim hak asuh anak dari Pak Joni." },
+                    { speaker: "Dr. Andi", avatar: "doctor", text: "Apakah data darah orang tua sudah ada? Baik, Ibu Sinta bergolongan <b>" + motherType + "</b> dan Pak Joni bergolongan <b>" + fatherType + "</b>." },
+                    { speaker: "Pengacara Budi", avatar: "civilian", text: "Betul dok, ini sampel darah anak mereka (Santi). Mohon buktikan validitas status kandungnya berdasarkan hukum genetika sains!" }
+                ],
+                desc: `<b>Skenario Acak:</b> Ibu (<b>${motherType}</b>) & Ayah (<b>${fatherType}</b>). Uji darah Santi (Anak) lalu tentukan legalitas biologisnya.<br>${buildPunnettHTML(motherType, fatherType)}`,
+                motherReal: motherType, fatherReal: fatherType, childReal: childType, isLegitFlag: isLegitimate,
+                subjects: [{ id: "santi", name: "1. Sampel Darah Santi (Anak)", type: childType }],
+                setupInterface: function() {
+                    let html = `
+                        <h4>Identifikasi Darah Anak:</h4>
+                        <label>Golongan Darah Santi:</label><select id="guess-santi">${getBloodOptions()}</select>
+                        <label>Apakah Pak Joni Ayah Kandung Santi?</label>
+                        <select id="guess-paternity"><option value="">-- Pilih --</option><option value="ya">Ya, Sangat Mungkin</option><option value="tidak">Tidak, Mustahil</option></select>
+                    `;
+                    document.getElementById('guess-container').innerHTML = html;
+                },
+                validate: function() {
+                    let gsanti = document.getElementById('guess-santi').value; let gPat = document.getElementById('guess-paternity').value;
+                    if(!gsanti || !gPat) return { success: false, msg: "Lengkapi jawaban terlebih dahulu!" };
+                    if(gsanti !== this.childReal) return { success: false, msg: "Uji golongan darah Santi salah!" };
+                    let expectedAnswer = this.isLegitFlag ? "ya" : "tidak";
+                    if(gPat === expectedAnswer) return { success: true, msg: "Analisis Hukum Tepat!" };
+                    return { success: false, msg: "Analisis genetika meleset!" };
+                }
+            };
+        }
+
+        function generateRandomCase4() {
+            const rhNegatives = ["A-", "B-", "O-", "AB-"]; const rhPositives = ["A+", "B+", "O+", "AB+"];
+            let motherType = rhNegatives[Math.floor(Math.random() * rhNegatives.length)];
+            let fatherType = rhPositives[Math.floor(Math.random() * rhPositives.length)];
+            let isDangerous = Math.random() < 0.5; let child2Type = ""; let shuffledPool = shuffleArray(bloodPool);
+            if(isDangerous) { for(let b of shuffledPool) { if(b.includes('+') && checkParentage(motherType, fatherType, b)) { child2Type = b; break; } } } 
+            else { for(let b of shuffledPool) { if(b.includes('-') && checkParentage(motherType, fatherType, b)) { child2Type = b; break; } } }
+            if(!child2Type) child2Type = motherType;
+
+            cases[4] = {
+                title: "Kasus 4: STEM Medis - Bahaya Eritroblastosis Fetalis",
+                story: [
+                    { speaker: "Ibu Sinta (Pasien)", avatar: "civilian", text: "Dokter Andi, saya memiliki Rhesus Negatif dan saat ini sedang mengandung anak kedua kami." },
+                    { speaker: "Dr. Andi", avatar: "doctor", text: "Kondisi ini berisiko memicu Inkompatibilitas Rhesus (Eritroblastosis Fetalis). Suster, mari kita lakukan uji laboratorium pada sampel darah janin pasien." }
+                ],
+                desc: `<b>Skenario Acak:</b> Ibu (<b>${motherType}</b>) & Ayah (<b>${fatherType}</b>).<br>${buildPunnettHTML(motherType, fatherType)}`,
+                motherReal: motherType, fatherReal: fatherType, childReal: child2Type, isDangerFlag: isDangerous,
+                subjects: [{ id: "janin2", name: "1. Sampel Darah Janin Kedua", type: child2Type }],
+                setupInterface: function() {
+                    let html = `
+                        <h4>Identifikasi:</h4>
+                        <label>Golongan Darah Janin:</label><select id="guess-janin">${getBloodOptions()}</select>
+                        <label>Risiko Terhadap Janin Kedua:</label>
+                        <select id="guess-fetalis"><option value="">-- Diagnosis --</option><option value="bahaya">BAHAYA (Mengalami Aglutinasi Antibodi Ibu)</option><option value="aman">AMAN (Rhesus Janin Selaras dengan Ibu)</option></select>
+                    `;
+                    document.getElementById('guess-container').innerHTML = html;
+                },
+                validate: function() {
+                    let gj = document.getElementById('guess-janin').value; let gf = document.getElementById('guess-fetalis').value;
+                    if(gj !== this.childReal) return { success: false, msg: "Salah uji darah!" };
+                    return (gf === (this.isDangerFlag ? "bahaya" : "aman")) ? { success: true, msg: "Diagnosis Sempurna!" } : { success: false, msg: "Diagnosis Meleset!" };
+                }
+            };
+        }
+
+        function generateRandomCase5() {
+            let evidenceType = bloodPool[Math.floor(Math.random() * bloodPool.length)]; let shuffledPool = shuffleArray(bloodPool);
+            let suspectAType = shuffledPool[0]; let suspectBType = shuffledPool[1]; let suspectCType = shuffledPool[2];
+            let culpritIndex = Math.floor(Math.random() * 3);
+            if(culpritIndex === 0) suspectAType = evidenceType;
+            if(culpritIndex === 1) suspectBType = evidenceType;
+            if(culpritIndex === 2) suspectCType = evidenceType;
+
+            cases[5] = {
+                title: "Kasus 5: STEM Forensik - Investigasi TKP",
+                story: [
+                    { speaker: "Detektif Eko", avatar: "detective", text: "Selamat malam Dokter Andi. Lab sekolah dibobol pencuri semalam. Kami menemukan bercak darah pelaku yang tertinggal di pecahan kaca." }
+                ],
+                desc: `Ujilah sampel bukti <b>TKP-X</b> dan 3 sampel Suspek.`,
+                evidenceReal: evidenceType, sAReal: suspectAType, sBReal: suspectBType, sCReal: suspectCType, culpritIdx: culpritIndex,
+                subjects: [ { id: "tkpx", name: "1. Bukti TKP-X", type: evidenceType }, { id: "susA", name: "2. Suspek A", type: suspectAType }, { id: "susB", name: "3. Suspek B", type: suspectBType }, { id: "susC", name: "4. Suspek C", type: suspectCType } ],
+                setupInterface: function() {
+                    let html = `
+                        <h4>Hasil Uji Kasus Forensik:</h4>
+                        <label>Darah TKP-X:</label><select id="guess-tkp">${getBloodOptions()}</select>
+                        <label>Suspek A:</label><select id="guess-sa">${getBloodOptions()}</select>
+                        <label>Suspek B:</label><select id="guess-sb">${getBloodOptions()}</select>
+                        <label>Suspek C:</label><select id="guess-sc">${getBloodOptions()}</select>
+                        <label>Siapa Pelaku Pembobolan?</label>
+                        <select id="guess-culprit"><option value="">-- Pilih --</option><option value="0">Suspek A</option><option value="1">Suspek B</option><option value="2">Suspek C</option></select>
+                    `;
+                    document.getElementById('guess-container').innerHTML = html;
+                },
+                validate: function() {
+                    let gk = document.getElementById('guess-tkp').value; 
+                    let gsa = document.getElementById('guess-sa').value; 
+                    let gsb = document.getElementById('guess-sb').value; 
+                    let gsc = document.getElementById('guess-sc').value; 
+                    let gc = document.getElementById('guess-culprit').value;
+                    
+                    if(!gk || !gsa || !gsb || !gsc || gc === "") return { success: false, msg: "Lengkapi semua jawaban analisis TKP!" };
+                    if(gk !== this.evidenceReal || gsa !== this.sAReal || gsb !== this.sBReal || gsc !== this.sCReal) return { success: false, msg: "Data golongan darah suspek atau TKP belum akurat!" };
+                    
+                    return (parseInt(gc) === this.culpritIdx) ? { success: true, msg: "Kasus Terungkap! Kecocokan DNA/Golongan darah forensik terbukti mutlak." } : { success: false, msg: "Tuduhan salah! Golongan darah suspek tersebut tidak cocok dengan bukti di kaca lab." };
+                }
+            };
+        }
+
+        function getBloodOptions() { return `<option value="">--</option>${bloodPool.map(b => `<option value="${b}">${b}</option>`).join('')}`; }
+        cases['custom'] = { title: "Mode Eksperimen Bebas (Custom)", story: [{ speaker: "Dr. Andi", avatar: "doctor", text: "Silakan tentukan golongan darah target sesukamu." }], subjects: [{ id: "custom", name: "Sampel Bebas Kustom", type: "A+" }], setupInterface: function() { document.getElementById('guess-container').innerHTML = ""; }, validate: function() { return { isCustom: true }; } };
+
+        function switchCase(id) {
+            currentCaseId = id;
+            document.querySelectorAll('.case-nav button').forEach(b => b.classList.remove('active'));
+            let activeBtn = document.getElementById(id === 'custom' ? 'nav-custom' : 'nav-' + id);
+            if(activeBtn) activeBtn.classList.add('active');
+            
+            document.getElementById('custom-controls').style.display = (id === 'custom') ? 'block' : 'none';
+
+            if(id === 1) generateRandomCase1();
+            if(id === 2) generateRandomCase2();
+            if(id === 3) generateRandomCase3();
+            if(id === 4) generateRandomCase4();
+            if(id === 5) generateRandomCase5();
+
+            currentStoryLines = cases[id].story;
+            storyIndex = 0;
+            document.getElementById('screen-story').style.display = 'flex';
+            document.getElementById('screen-lab').style.display = 'none';
+            renderStoryLine();
+        }
+
+        function renderStoryLine() {
+            let currentLine = currentStoryLines[storyIndex];
+            document.getElementById('speaker-lbl').innerText = currentLine.speaker;
+            document.getElementById('dialogue-txt').innerText = currentLine.text;
+            
+            let avatarKey = currentLine.avatar;
+            document.getElementById('char-img-element').src = imageAssets[avatarKey] || imageAssets['civilian'];
+            
+            document.getElementById('story-next-btn').innerText = (storyIndex === currentStoryLines.length - 1) ? "Mulai Uji Lab 🔬" : "Lanjut ▶";
+        }
+
+        function advanceStory() {
+            if(storyIndex < currentStoryLines.length - 1) {
+                storyIndex++; renderStoryLine();
+            } else {
+                document.getElementById('screen-story').style.display = 'none';
+                document.getElementById('screen-lab').style.display = 'block';
+                setupLabInterface();
+            }
+        }
+
+        function setupLabInterface() {
+            let id = currentCaseId;
+            document.getElementById('lab-scenario-text').innerHTML = `<b>${cases[id].title}</b><br>${cases[id].desc || cases[id].title}`;
+            let select = document.getElementById('select-subject');
+            select.innerHTML = ""; stateData = {};
+            cases[id].subjects.forEach(sub => {
+                let opt = document.createElement('option'); opt.value = sub.id; opt.textContent = sub.name; select.appendChild(opt);
+                stateData[sub.id] = { A: false, B: false, D: false };
+            });
+            cases[id].setupInterface();
+            setupSerumSelectionNull();
+            loadSubjectBlood();
+        }
+
+        function setupCustomCase() {
+            if(currentCaseId !== 'custom') return;
+            cases['custom'].subjects[0].type = document.getElementById('custom-blood-type').value;
+            resetPlate();
+        }
+
+        function loadSubjectBlood() {
+            document.querySelectorAll('.blood-drop').forEach(d => d.classList.remove('clotted', 'diluted'));
+            let subId = document.getElementById('select-subject').value;
+            if(!subId || !stateData[subId]) return;
+            let bType = cases[currentCaseId].subjects.find(s => s.id === subId).type;
+            ['A', 'B', 'D'].forEach(t => {
+                if(stateData[subId][t]) document.getElementById('drop-' + t).classList.add(shouldClot(bType, t) ? 'clotted' : 'diluted');
+            });
+        }
+
+        function selectSerum(type) {
+            selectedSerum = type;
+            document.querySelectorAll('.serum-bottle').forEach(b => b.classList.remove('selected'));
+            document.getElementById('serum-' + type.toLowerCase()).classList.add('selected');
+            document.getElementById('status-text').innerText = "Pipet terisi Serum Anti-" + type + ". Klik bulatan darah.";
+        }
+
+        function setupSerumSelectionNull() {
+            selectedSerum = null;
+            document.querySelectorAll('.serum-bottle').forEach(b => b.classList.remove('selected'));
+            document.getElementById('status-text').innerText = "Pilih botol serum di atas rak.";
+        }
+
+        function dropSerum(targetWell) {
+            if(!selectedSerum) { alert("Pilih botol serum dulu!"); return; }
+            if(selectedSerum !== targetWell) { alert("Gunakan wadah cawan yang bersesuaian!"); return; }
+            let subId = document.getElementById('select-subject').value;
+            stateData[subId][targetWell] = true;
+            let bType = cases[currentCaseId].subjects.find(s => s.id === subId).type;
+            let statusEl = document.getElementById('status-text');
+            if(shouldClot(bType, targetWell)) {
+                document.getElementById('drop-' + targetWell).classList.add('clotted');
+                statusEl.innerText = "Reaksi AGLUTINASI (Positif Gumpal).";
+            } else {
+                document.getElementById('drop-' + targetWell).classList.add('diluted');
+                statusEl.innerText = "Reaksi NEGATIF (Darah encer).";
+            }
+        }
+
+        function shouldClot(bloodType, serumType) {
+            if(serumType === 'A' && bloodType.includes('A')) return true;
+            if(serumType === 'B' && bloodType.includes('B')) return true;
+            if(serumType === 'D' && bloodType.includes('+')) return true;
+            return false;
+        }
+
+        function resetPlate() {
+            let subId = document.getElementById('select-subject').value;
+            if(subId && stateData[subId]) stateData[subId] = { A: false, B: false, D: false };
+            loadSubjectBlood(); setupSerumSelectionNull();
+        }
+
+        function checkAnswer() {
+            let res = cases[currentCaseId].validate();
+            if(res.isCustom) { alert("Mode Eksperimen Kustom Terkonfirmasi Tipe: " + cases['custom'].subjects[0].type); return; }
+            if(res.success) {
+                document.getElementById('modal-message').innerHTML = res.msg;
+                document.getElementById('success-modal').style.display = 'flex';
+            } else { alert(res.msg); }
+        }
+
+        function closeModal() {
+            document.getElementById('success-modal').style.display = 'none';
+            switchCase((typeof currentCaseId === 'number' && currentCaseId < 5) ? currentCaseId + 1 : 1);
+        }
+
+        window.onload = function() { switchCase(1); };
+    </script>
+</body>
+</html>
